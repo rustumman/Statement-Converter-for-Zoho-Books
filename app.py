@@ -1,7 +1,7 @@
 import streamlit as st
 import xlrd
 
-from parser import detect_statement_type, extract_last4, parse_cc_statement, parse_bank_statement
+from statement_parser import detect_statement_type, extract_last4, parse_cc_statement, parse_bank_statement
 from converter import (
     to_zoho_cc_xlsx,
     to_zoho_bank_xlsx,

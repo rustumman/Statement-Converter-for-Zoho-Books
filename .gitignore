@@ -7,3 +7,7 @@ venv/
 .DS_Store
 .streamlit/secrets.toml
 .claude/settings.local.json
+
+# Bank statement files — never commit real financial data
+*.xls
+*.xlsx
