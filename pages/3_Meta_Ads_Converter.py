@@ -101,10 +101,14 @@ def extract_transactions(wb: openpyxl.Workbook) -> pd.DataFrame:
     if header_row_idx is None:
         raise ValueError("Could not find a 'Date' header row in the uploaded file.")
 
-    # Resolve column positions by name (case-insensitive)
-    date_col    = col_idx.get("date", 0)
-    txnid_col   = col_idx.get("transaction id", 1)
-    amount_col  = col_idx.get("amount", 3)   # explicit lookup by name
+    # Resolve column positions by name (case-insensitive, partial match for amount)
+    date_col   = col_idx.get("date", 0)
+    txnid_col  = col_idx.get("transaction id", 1)
+    # "Amount" may appear as "Amount", "Amount (INR)", "Amount (USD)", etc.
+    amount_col = next(
+        (i for name, i in col_idx.items() if "amount" in name),
+        3,  # fallback to column index 3
+    )
 
     rows = []
     for row in ws.iter_rows(min_row=header_row_idx + 2, values_only=True):
@@ -144,6 +148,10 @@ def extract_transactions(wb: openpyxl.Workbook) -> pd.DataFrame:
 
     df = pd.DataFrame(rows)
     df["Bill Date"] = pd.to_datetime(df["Bill Date"])
+    # Strip commas from string amounts (e.g. "4,956" in CSV exports)
+    df["Rate"] = df["Rate"].apply(
+        lambda x: str(x).replace(",", "").strip() if isinstance(x, str) else x
+    )
     df["Rate"] = pd.to_numeric(df["Rate"], errors="coerce")
     for col, val in PRESET.items():
         df[col] = val
