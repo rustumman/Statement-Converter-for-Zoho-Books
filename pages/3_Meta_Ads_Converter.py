@@ -69,6 +69,19 @@ def parse_date(val) -> datetime | None:
     return None
 
 
+def load_workbook_from_csv(file_bytes: bytes) -> openpyxl.Workbook:
+    """Convert a CSV file into an in-memory openpyxl Workbook so the same
+    extract_transactions logic works for both CSV and Excel inputs."""
+    import csv, io as _io
+    text = file_bytes.decode("utf-8-sig", errors="replace")  # handle BOM
+    reader = csv.reader(_io.StringIO(text))
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    for row in reader:
+        ws.append(row)
+    return wb
+
+
 def extract_transactions(wb: openpyxl.Workbook) -> pd.DataFrame:
     ws = wb.active
 
@@ -182,8 +195,8 @@ st.markdown(
 )
 
 uploaded = st.file_uploader(
-    "Upload Meta Ads invoice summary (.xlsx)",
-    type=["xlsx"],
+    "Upload Meta Ads invoice summary (.xlsx or .csv)",
+    type=["xlsx", "csv"],
     accept_multiple_files=False,
 )
 
@@ -192,7 +205,11 @@ if not uploaded:
     st.stop()
 
 try:
-    wb = openpyxl.load_workbook(io.BytesIO(uploaded.read()))
+    file_bytes = uploaded.read()
+    if uploaded.name.lower().endswith(".csv"):
+        wb = load_workbook_from_csv(file_bytes)
+    else:
+        wb = openpyxl.load_workbook(io.BytesIO(file_bytes))
     df = extract_transactions(wb)
 except Exception as e:
     st.error(f"Could not parse file: {e}")
