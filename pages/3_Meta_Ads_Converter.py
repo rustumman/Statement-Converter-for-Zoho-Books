@@ -112,6 +112,8 @@ def extract_transactions(wb: openpyxl.Workbook) -> pd.DataFrame:
         raise ValueError("No transaction rows found after the header.")
 
     df = pd.DataFrame(rows)
+    df["Bill Date"] = pd.to_datetime(df["Bill Date"])
+    df["Rate"] = pd.to_numeric(df["Rate"], errors="coerce")
     for col, val in PRESET.items():
         df[col] = val
 
