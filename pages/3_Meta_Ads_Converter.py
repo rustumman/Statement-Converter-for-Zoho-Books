@@ -72,26 +72,44 @@ def parse_date(val) -> datetime | None:
 def extract_transactions(wb: openpyxl.Workbook) -> pd.DataFrame:
     ws = wb.active
 
-    # Find the header row (first cell == "Date")
+    # Find the header row and map column names → indices
     header_row_idx = None
+    col_idx = {}
     for idx, row in enumerate(ws.iter_rows(values_only=True)):
-        if row and str(row[0]).strip().lower() == "date":
+        if not row:
+            continue
+        row_lower = [str(c).strip().lower() if c is not None else "" for c in row]
+        if "date" in row_lower:
             header_row_idx = idx
+            for i, name in enumerate(row_lower):
+                col_idx[name] = i
             break
 
     if header_row_idx is None:
         raise ValueError("Could not find a 'Date' header row in the uploaded file.")
 
-    rows = []
-    for row in ws.iter_rows(min_row=header_row_idx + 2, values_only=True):  # +2: skip header row itself
-        date_val, txn_id, _method, amount, currency = (row + (None,) * 5)[:5]
+    # Resolve column positions by name (case-insensitive)
+    date_col    = col_idx.get("date", 0)
+    txnid_col   = col_idx.get("transaction id", 1)
+    amount_col  = col_idx.get("amount", 3)   # explicit lookup by name
 
-        # Stop at footer rows (Total amount billed / empty date)
+    rows = []
+    for row in ws.iter_rows(min_row=header_row_idx + 2, values_only=True):
+        if not row or len(row) == 0:
+            continue
+
+        def cell(i):
+            return row[i] if i < len(row) else None
+
+        date_val = cell(date_col)
+        txn_id   = cell(txnid_col)
+        amount   = cell(amount_col)
+
+        # Stop at footer (Total amount billed row has no date/txn_id)
         if date_val is None and txn_id is None:
             continue
-        if isinstance(txn_id, str) and "total" in str(txn_id).lower():
-            break
-        if isinstance(_method, str) and "total" in str(_method).lower():
+        # Stop if any cell contains "total"
+        if any("total" in str(c).lower() for c in row if c is not None):
             break
         if date_val is None:
             continue
@@ -102,9 +120,9 @@ def extract_transactions(wb: openpyxl.Workbook) -> pd.DataFrame:
 
         rows.append(
             {
-                "Bill Date": parsed_date,
+                "Bill Date":   parsed_date,
                 "Bill Number": str(txn_id).strip() if txn_id else "",
-                "Rate": amount,
+                "Rate":        amount,
             }
         )
 
