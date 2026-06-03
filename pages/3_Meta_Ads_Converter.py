@@ -174,7 +174,7 @@ if not uploaded:
     st.stop()
 
 try:
-    wb = openpyxl.load_workbook(uploaded)
+    wb = openpyxl.load_workbook(io.BytesIO(uploaded.read()))
     df = extract_transactions(wb)
 except Exception as e:
     st.error(f"Could not parse file: {e}")
