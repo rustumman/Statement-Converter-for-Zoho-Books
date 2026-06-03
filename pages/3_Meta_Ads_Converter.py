@@ -130,19 +130,19 @@ def to_xlsx(df: pd.DataFrame) -> bytes:
     for _, row in df.iterrows():
         ws.append(
             [
-                row["Bill Date"],          # datetime → Excel date
-                row["Bill Number"],
-                row["Rate"],
+                row["Bill Date"].to_pydatetime() if hasattr(row["Bill Date"], "to_pydatetime") else row["Bill Date"],
+                str(row["Bill Number"]),
+                float(row["Rate"]) if pd.notna(row["Rate"]) else None,   # explicit Python float
                 row["Bill Status"],
                 row["GST Treatment"],
-                row["Is Inclusive Tax"],
+                bool(row["Is Inclusive Tax"]),
                 row["Vendor Name"],
                 row["Item Name"],
                 row["Account"],
-                row["Quantity"],
+                int(row["Quantity"]),
                 row["Item Type"],
                 row["Tax Name"],
-                row["Tax Percentage"],
+                float(row["Tax Percentage"]),
             ]
         )
 
